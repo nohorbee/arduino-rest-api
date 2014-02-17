@@ -1,3 +1,9 @@
 [submodule "arduino-led-helper"]
 	path = arduino-led-helper
 	url = https://github.com/nohorbee/arduino-led-helper.git
+[submodule "arduino-photoresistor-helper"]
+	path = arduino-photoresistor-helper
+	url = https://github.com/nohorbee/arduino-photoresistor-helper.git
+[submodule "arduino-potenciometer-helper"]
+	path = arduino-potenciometer-helper
+	url = https://github.com/nohorbee/arduino-potenciometer-helper.git
