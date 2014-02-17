@@ -7,3 +7,6 @@
 [submodule "arduino-potenciometer-helper"]
 	path = arduino-potenciometer-helper
 	url = https://github.com/nohorbee/arduino-potenciometer-helper.git
+[submodule "arduino-potentiometer-helper"]
+	path = arduino-potentiometer-helper
+	url = https://github.com/nohorbee/arduino-potentiometer-helper.git
