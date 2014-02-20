@@ -1,6 +1,6 @@
 #include <LedHelper.h>
 #include <PhotoresistorHelper.h>
-#include <PotenciometerHelper.h>
+#include <PotentiometerHelper.h>
 #include <Servo.h> 
 #include "SPI.h"
 #include "Ethernet.h"
@@ -9,12 +9,7 @@
 #define VERSION_STRING "0.1"
 #define PREFIX ""
 
-const int photoresistorPin = 0;
-const int potenciometerPin = 1;
-const byte ledPin = 9;
-const int servoPin = 8;
-//int lightLevel, tempLevel, high = 0, low = 1023;
-
+const byte photoresistorPin = 0, potentiometerPin = 1, ledPin = 9, servoPin = 8;
 
 /* CHANGE THIS TO YOUR OWN UNIQUE VALUE.  The MAC number should be
  * different from any other devices on your network or you'll have
@@ -32,7 +27,8 @@ WebServer webserver(PREFIX, 80);
 Servo servo1;
 LED led = LED(ledPin);
 Photoresistor photoresistor = Photoresistor(photoresistorPin);
-Potenciometer potenciometer = Potenciometer(potenciometerPin);;
+Potentiometer potentiometer = Potentiometer(potentiometerPin);
+
 void lightLevelCmd(WebServer &server, WebServer::ConnectionType verb, char *url_tail, bool tail_complete) {
   switch (verb)
     {
@@ -54,7 +50,7 @@ void volumeCmd(WebServer &server, WebServer::ConnectionType verb, char *url_tail
     case WebServer::GET:
         server.httpSuccess();
         server.printf("{ volume: ");
-        server.print(potenciometer.getVolume());
+        server.print(potentiometer.getVolume());
         server.print(" }");
         break;
     default:
@@ -128,16 +124,29 @@ void servoCmd(WebServer &server, WebServer::ConnectionType verb, char *url_tail,
 
 void setup()
 {
+  Serial.begin(9600);
   pinMode(ledPin, OUTPUT);
   servo1.attach(servoPin, 5, 168);
-  /* initialize the Ethernet adapter */
-  Ethernet.begin(mac, ip);
+  if (Ethernet.begin(mac) == 0) {
+    Serial.println("Failed to configure Ethernet using DHCP");
+    for(;;)
+      ;
+  }
+  // print your local IP address:
+  Serial.print("My IP address: ");
+  for (byte thisByte = 0; thisByte < 4; thisByte++) {
+    // print the value of each byte of the IP address:
+    Serial.print(Ethernet.localIP()[thisByte], DEC);
+    Serial.print("."); 
+  }
+  Serial.println();
+  
   webserver.addCommand("lightLevel", &lightLevelCmd);
   webserver.addCommand("volume", &volumeCmd);
   webserver.addCommand("led", &ledCmd);
   webserver.addCommand("servo", &servoCmd);
   webserver.begin();
-  Serial.begin(9600);
+
 }
 //
 void loop()
