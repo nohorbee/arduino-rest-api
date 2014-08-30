@@ -1,28 +1,5 @@
-#include <stdlib.h>
-#include <LedHelper.h>
-#include <PhotoresistorHelper.h>
-#include <PotentiometerHelper.h>
-#include <Servo.h> 
-#include "SPI.h"
-#include "Ethernet.h"
-#include "WebServer.h"
-#include <Resource.h>
-#include <Flash.h>
-
-static uint8_t mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
-static uint8_t ip[] = { 172,16,20,254 };
 const byte SIZE_RESOURCES = 7; // constant until resolve what's going on with sizeof
 Handler handlers[SIZE_RESOURCES];
-//#define VERSION_STRING "0.1"
-#define PREFIX ""
-WebServer webserver(PREFIX, 80);
-const byte photoresistorPin = 0, potentiometerPin = 1, ledPin = 9, servoPin = 8;
-Servo servo1;
-LED led = LED(ledPin);
-Photoresistor photoresistor = Photoresistor(photoresistorPin);
-Potentiometer potentiometer = Potentiometer(potentiometerPin);
-
-
 void parseTail(char* tail, String &url, String &queryParams) {
   String tailToTokenize(tail);
   String sUrl = "";
@@ -36,16 +13,19 @@ void parseTail(char* tail, String &url, String &queryParams) {
 }
 
 
-
 void dispatch(WebServer &server, WebServer::ConnectionType verb, char url_tail[], bool tail_complete) {
   Serial.println();
   Serial << F("Available RAM on dispatch start is: ") << availableMemory() << "\r\n";
+  
+  // THIS ARRAY CAN'T BE GENERATED GLOBAL, OR PASSED AS A PARAMETER (since the function is a Command). So,
+  // The code generator must inject this here (I haven' found a nicer way to do this).
   FLASH_STRING_ARRAY(resources,
       PSTR("/led/"), 
       PSTR("/servo/"), 
       PSTR("/volume/"), 
       PSTR("/lightLevel/"),
   );
+  
   
   String url;
   String queryParams;
@@ -68,105 +48,18 @@ void dispatch(WebServer &server, WebServer::ConnectionType verb, char url_tail[]
   Serial.print(queryParams);
   Serial.print(" and with uri Params: ");
   Serial.println(uriParams);
+  
   if (foundURIPosition>-1) {
     handlers[foundURIPosition].method(server, verb, uriParams, queryParams);
   }
 
-}
 
-
-void lightLevelHandler(WebServer &server, WebServer::ConnectionType verb, String uriParams, String queryParams) {
-  switch (verb)
-    {
-    case WebServer::GET:
-        server.httpSuccess();
-        server.printf("{ lightLevel: ");
-        server.print(photoresistor.getLightLevel());
-        server.print(" }");
-        break;
-    default:
-        server.httpFail();
-        server.print("Verb: Unsupported");
-    }
-}
-
-void volumeHandler(WebServer &server, WebServer::ConnectionType verb, String uriParams, String queryParams) {
-  switch (verb)
-    {
-    case WebServer::GET:
-        server.httpSuccess();
-        server.printf("{ volume: ");
-        server.print(potentiometer.getVolume());
-        server.print(" }");
-        break;
-    default:
-        server.httpFail();
-        server.print("Verb: Unsupported");
-    }
-}
-
-void ledHandler(WebServer &server, WebServer::ConnectionType verb, String uriParams, String queryParams) {
-  switch (verb)
-    {
-    case WebServer::POST:
-        led.on();
-        server.httpSuccess();
-        break;
-    case WebServer::DELETE:
-        led.off();
-        server.httpSuccess();
-        break;
-    default:
-        server.httpFail();
-        server.print("Verb: Unsupported");
-    }
-}
-
-void servoHandler(WebServer &server, WebServer::ConnectionType verb, String uriParams, String queryParams) {
-  String angle = "";
-  switch (verb)
-    {
-    case WebServer::POST:
-        angle = getPostParameter(server, "angle"); 
-        if (angle=="") {
-          server.httpFail();
-          server.print("Parameter \"angle\" expected");
-        } else {
-            servo1.write(angle.toInt());
-            server.httpSuccess();
-            server.printf("{ angle: ");
-            server.print(servo1.read());
-            server.print(" }");
-        }
-        break;
-        
-    case WebServer::PATCH:
-        angle = getPostParameter(server, "angle"); 
-        if (angle=="") {
-          server.httpFail();
-          server.print("Parameter \"angle\" expected");
-        } else {
-            servo1.write(servo1.read() + angle.toInt());
-            server.httpSuccess();
-            server.printf("{ angle: ");
-            server.print(servo1.read());
-            server.print(" }");
-        }
-        break;
-        
-     case WebServer::GET:
-        servo1.write(servo1.read() + angle.toInt());
-        server.httpSuccess();
-        server.printf("{ angle: ");
-        server.print(servo1.read());
-        server.print(" }");
-        break;
-
-    server.httpFail();
-        server.print("Verb: Unsupported");
-    }
     
+  
 }
+
+
+
 
 String getParameter(String params, String paramName) {
   
@@ -288,54 +181,8 @@ int lookUp(String url, _FLASH_STRING_ARRAY resources) {
   return foundPosition;
 }
  
-void setup()
-{
-  Serial.begin(9600);
-  
-  pinMode(ledPin, OUTPUT);
-  servo1.attach(servoPin, 5, 168);
-
-  ethStart();
-  registerHandlers();
-  webserver.setFailureCommand(&dispatch);
-  webserver.begin();
-//
-}
-
-void registerHandlers() {
-  handlers[0].method = &ledHandler;
-  handlers[1].method = &servoHandler;
-  handlers[2].method = &volumeHandler;
-  handlers[3].method = &lightLevelHandler;
-}
-//
-void loop()
-{
-  char buff[64];
-  int len = 64;
- /* process incoming connections one at a time forever */
-  webserver.processConnection(buff, &len); 
-}
-
-void ethStart() {
-//  Ethernet.begin(mac,ip);
-  if (Ethernet.begin(mac) == 0) {
-    Serial.println(F("Failed to configure Ethernet using DHCP"));
-    for(;;)
-      ;
-  }
-  // print your local IP address:
-  Serial.print(F("My IP address: "));
-  for (byte thisByte = 0; thisByte < 4; thisByte++) {
-    // print the value of each byte of the IP address:
-    Serial.print(Ethernet.localIP()[thisByte], DEC);
-    Serial.print(F("."));
-  }
-  Serial.println();
-}
-
-
-
+ 
+ 
 String getPostParameter(WebServer server, char paramName[16]) {
   
     bool repeat;
